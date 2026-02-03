@@ -7,14 +7,18 @@ using LinearAlgebra
 set_theme!(theme_dark())
 
 df = CSV.read(
-	"Physik_Kopfball.csv", DataFrame)
+	"Physik_Kopfball.csv", 
+	DataFrame)
+
 const ballMass = 0.4
 
 rename!(
-	df, Dict(
-	"Video-Auswertung: Zeit (s)" => :t,
-	"Video-Auswertung: X-Geschwindigkeit (m/s)" => :vx,
-	"Video-Auswertung: Y-Geschwindigkeit (m/s)" => :vy))
+	df, 
+	Dict(
+		"Video-Auswertung: Zeit (s)" => :t,
+		"Video-Auswertung: X-Geschwindigkeit (m/s)" => :vx,
+		"Video-Auswertung: Y-Geschwindigkeit (m/s)" => :vy
+	))
 
 timeData = Float64.(df.t)
 vXData = Float64.(df.vx)
@@ -24,29 +28,30 @@ fig = Figure(
 	size = (1200, 800))
 
 axVX = Axis(
-	fig[1, 1], title = "vX: Klicken & Ziehen",
-	xlabel = "Zeit (s)", ylabel = "vx (m/s)")
+	fig[1, 1], 
+	title = "vX: Klicken & Ziehen", 
+	xlabel = "Zeit (s)", 
+	ylabel = "vx (m/s)")
+
 axVY = Axis(
-	fig[1, 2], title = "vY",
-	xlabel = "Zeit (s)", ylabel = "vy (m/s)")
+	fig[1, 2], 
+	title = "vY", 
+	xlabel = "Zeit (s)", 
+	ylabel = "vy (m/s)")
 
 limitValue = Observable(2.0)
+
 axVector = Axis(
-	fig[2, 1], title = "Echtzeit Impulsvektor Δp",
-	xlabel = "Δpx (kg*m/s)", ylabel = "Δpy (kg*m/s)",
+	fig[2, 1:2], 
+	title = "Echtzeit Impulsvektor Δp",
+	xlabel = "Δpx (kg*m/s)", 
+	ylabel = "Δpy (kg*m/s)",
 	aspect = DataAspect())
-
-# Die Magnitude-Achse (jetzt ohne ungültige Attribute)
-axMag = Axis(
-	fig[2, 2], title = "Magnitude")
-
-# Alles Verstecken über Funktionen statt Attribute
-hidedecorations!(axMag) # Versteckt Ticks, Labels, Grids
-hidespines!(axMag)      # Versteckt die Rahmenlinien
 
 on(limitValue) do val
 	limits!(axVector, -val, val, -val, val)
 end
+
 limitValue[] = 2.0
 
 deregister_interaction!(axVX, :rectanglezoom)
@@ -55,8 +60,8 @@ deregister_interaction!(axVector, :rectanglezoom)
 
 lines!(axVX, timeData, vXData, color = :cyan)
 lines!(axVY, timeData, vYData, color = :magenta)
-hlines!(axVector, [0], color = :white, alpha = 0.2)
-vlines!(axVector, [0], color = :white, alpha = 0.2)
+hlines!(axVector, [0], color = :white, alpha = 0.1)
+vlines!(axVector, [0], color = :white, alpha = 0.1)
 
 tStart = Observable(NaN)
 tEnd = Observable(NaN)
@@ -70,23 +75,35 @@ arrowPos = Observable([Point2f(0, 0)])
 arrowDir = Observable([Point2f(0, 0)])
 
 Makie.arrows2d!(
-	axVector, arrowPos, arrowDir,
-	color = :yellow, shaftwidth = 4.0,
-	tiplength = 0.2, tipwidth = 0.2)
+	axVector, 
+	arrowPos, 
+	arrowDir,
+	color = :yellow, 
+	shaftwidth = 2, 
+	tiplength = 20, 
+	tipwidth = 15, 
+	markerspace = :pixel)
 
-lines!(
-	axVector, lift(d -> [Point2f(0, 0), Point2f(0, norm(d[1]))], arrowDir),
-	color = (:white, 0.4), linewidth = 8)
+magValueText = Observable("0.000")
 
-magValueText = Observable("0.000\nkg*m/s")
-
-# Text im axMag zentrieren
+# Magnitude-Text dezent am rechten Rand
 text!(
-	axMag, 0.5, 0.5,
+	axVector, 
+	lift(r -> Point2f(r.widths[1] - 15, r.widths[2] / 2), axVector.scene.px_area),
 	text = magValueText,
-	color = :white, fontsize = 45,
-	align = (:center, :center),
-	space = :relative)
+	color = :gray70, 
+	fontsize = 22,
+	align = (:right, :center),
+	space = :pixel)
+
+text!(
+	axVector, 
+	lift(r -> Point2f(r.widths[1] - 15, r.widths[2] / 2 - 25), axVector.scene.px_area),
+	text = "kg*m/s",
+	color = :gray50, 
+	fontsize = 12,
+	align = (:right, :center),
+	space = :pixel)
 
 isDragging = Observable(false)
 
@@ -101,7 +118,7 @@ function updateImpulse(ts, te)
 	magnitude = norm(deltaP)
 	
 	arrowDir[] = [Point2f(deltaP[1], deltaP[2])]
-	magValueText[] = "$(round(magnitude, digits=3))\nkg*m/s"
+	magValueText[] = "$(round(magnitude, digits=3))"
 	
 	maxVal = max(abs(deltaP[1]), abs(deltaP[2]), magnitude)
 	if maxVal > limitValue[]
@@ -131,7 +148,5 @@ on(events(axVX.scene).mouseposition) do pos
 		updateImpulse(tStart[], tEnd[])
 	end
 end
-
-colsize!(fig.layout, 1, Relative(0.8))
 
 display(fig)
