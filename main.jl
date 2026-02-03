@@ -105,13 +105,29 @@ text!(
 
 isDragging = Observable(false)
 
-function updatePhysics(ts, te)
-	idxS = argmin(abs.(timeData .- ts))
-	idxE = argmin(abs.(timeData .- te))
-	dt = abs(timeData[idxE] - timeData[idxS])
+function interpolateV(tTarget)
+	idx2 = findfirst(x -> x >= tTarget, timeData)
 	
-	vVor = Point2f(vXData[idxS], vYData[idxS])
-	vNach = Point2f(vXData[idxE], vYData[idxE])
+	if isnothing(idx2) return Point2f(vXData[end], vYData[end]) end
+	if idx2 == 1 return Point2f(vXData[1], vYData[1]) end
+	
+	idx1 = idx2 - 1
+	t1, t2 = timeData[idx1], timeData[idx2]
+	
+	frac = (tTarget - t1) / (t2 - t1)
+	
+	vx = vXData[idx1] + frac * (vXData[idx2] - vXData[idx1])
+	vy = vYData[idx1] + frac * (vYData[idx2] - vYData[idx1])
+	
+	return Point2f(vx, vy)
+end
+
+function updatePhysics(ts, te)
+	dt = abs(te - ts)
+	
+	vVor = interpolateV(ts)
+	vNach = interpolateV(te)
+	
 	dp = ballMass .* (vNach - vVor)
 	mag = norm(dp)
 	fAvg = dt > 0 ? mag / dt : 0.0
