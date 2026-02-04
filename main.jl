@@ -166,26 +166,31 @@ on(objectMass) do _
 	end
 end
 
-on(events(axVX.scene).mousebutton) do event
-	if event.button == Mouse.left
-		if event.action == Mouse.press
-			pos = mouseposition(axVX.scene)
-			tStart[] = pos[1]
-			tEnd[] = pos[1]
-			isDragging[] = true
-		elseif event.action == Mouse.release
-			isDragging[] = false
+function registerInteractionLogic(ax)
+	on(events(ax.scene).mousebutton) do event
+		if event.button == Mouse.left
+			if event.action == Mouse.press
+				pos = mouseposition(ax.scene)
+				tStart[] = pos[1]
+				tEnd[] = pos[1]
+				isDragging[] = true
+			elseif event.action == Mouse.release
+				isDragging[] = false
+				updatePhysics(tStart[], tEnd[])
+			end
+		end
+	end
+
+	on(events(ax.scene).mouseposition) do pos
+		if isDragging[]
+			axPos = mouseposition(ax.scene)
+			tEnd[] = axPos[1]
 			updatePhysics(tStart[], tEnd[])
 		end
 	end
 end
 
-on(events(axVX.scene).mouseposition) do pos
-	if isDragging[]
-		axPos = mouseposition(axVX.scene)
-		tEnd[] = axPos[1]
-		updatePhysics(tStart[], tEnd[])
-	end
-end
+registerInteractionLogic(axVX)
+registerInteractionLogic(axVY)
 
 display(fig)
